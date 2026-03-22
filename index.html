@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sfeerbeelden - Heldere Grid</title>
+    <style>
+        * { box-sizing: border-box; }
+        
+        body, html {
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            background-color: #000;
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            width: 100%; height: 100%;
+            gap: 15px; padding: 15px;
+        }
+
+        .photo-slot {
+            position: relative;
+            width: 100%; height: 100%;
+        }
+
+        .photo-slot img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 4px;
+            cursor: pointer;
+            position: absolute;
+            top: 0; left: 0;
+            /* Vloeiende overgang voor zoom en effecten */
+            transition: 
+                transform 1.5s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.8s ease, 
+                filter 0.8s ease,
+                box-shadow 0.8s ease;
+            z-index: 1;
+            will-change: transform;
+        }
+
+        /* AANPASSING HIER: De achtergrondgrid blijft veel duidelijker */
+        .grid-container.has-active .photo-slot img:not(.active) {
+            opacity: 0.80;        /* 60% zichtbaar (was 25%) */
+            filter: brightness(80%) blur(2px); /* Iets donkerder en heel licht wazig voor diepte */
+        }
+
+        /* De actieve foto (zoom) */
+        .photo-slot img.active {
+            object-fit: contain !important; 
+            z-index: 9999 !important;
+            opacity: 1 !important;
+            filter: brightness(100%) blur(0px) !important;
+            /* Extra sterke gloed om de foto los te maken van de heldere achtergrond */
+            box-shadow: 0 0 100px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .controls {
+            position: fixed; bottom: 10px; left: 10px;
+            z-index: 10000; display: flex; gap: 10px;
+            opacity: 0.1; transition: opacity 0.3s;
+        }
+        .controls:hover { opacity: 1; }
+        button {
+            background: rgba(30,30,30,0.9); color: white; border: 1px solid #555;
+            padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button id="playPauseBtn">Pauze</button>
+        <button id="nextSetBtn">Volgende Reeks »</button>
+    </div>
+
+    <div id="gallery-container" class="grid-container"></div>
+
+    <script>
+        // De rest van de JavaScript blijft EXACT hetzelfde als in de vorige versie
+        const photos = [];
+        const baseName = "Gezinsdag 2026";
+        const totaalAantalFotos = 19; 
+
+        for(let i = 1; i <= totaalAantalFotos; i++) {
+            photos.push(`images/${baseName}_${i}.jpg`);
+        }
+
+        let currentSetIndex = 0;
+        let isPaused = false;
+        const gallery = document.getElementById('gallery-container');
+
+        function loadGrid(startIndex) {
+            gallery.innerHTML = '';
+            const set = photos.slice(startIndex, startIndex + 9);
+            set.forEach((url, i) => {
+                const slot = document.createElement('div');
+                slot.className = 'photo-slot';
+                slot.innerHTML = `<img src="${url}" id="img-${i}" onclick="window.open('${url}', '_blank')">`;
+                gallery.appendChild(slot);
+            });
+            startSequence();
+        }
+
+        async function animatePhoto(index) {
+            const img = document.getElementById(`img-${index}`);
+            if (!img) return;
+
+            const slot = img.parentElement;
+            const rect = img.getBoundingClientRect();
+            
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const imgCenterX = rect.left + rect.width / 2;
+            const imgCenterY = rect.top + rect.height / 2;
+            const moveX = centerX - imgCenterX;
+            const moveY = centerY - imgCenterY;
+
+            const scaleX = (window.innerWidth * 0.96) / rect.width;
+            const scaleY = (window.innerHeight * 0.96) / rect.height;
+            const zoomScale = Math.min(scaleX, scaleY); 
+
+            gallery.classList.add('has-active');
+            slot.style.zIndex = "1000"; 
+            
+            img.classList.add('active');
+            img.style.transform = `translate(${moveX}px, ${moveY}px) scale(${zoomScale})`;
+
+            await new Promise(res => setTimeout(res, 4000));
+
+            img.style.transform = `translate(0, 0) scale(1)`;
+            gallery.classList.remove('has-active');
+
+            await new Promise(res => setTimeout(res, 1550)); 
+            
+            img.classList.remove('active');
+            slot.style.zIndex = "1"; 
+        }
+
+        async function startSequence() {
+            const fotosInGrid = document.querySelectorAll('.photo-slot img');
+            for (let i = 0; i < fotosInGrid.length; i++) {
+                if (isPaused) {
+                    await new Promise(res => setTimeout(res, 500));
+                    i--; continue;
+                }
+                await animatePhoto(i);
+                await new Promise(res => setTimeout(res, 400));
+            }
+            if (!isPaused) {
+                currentSetIndex += 9;
+                if (currentSetIndex >= photos.length) currentSetIndex = 0;
+                loadGrid(currentSetIndex);
+            }
+        }
+
+        document.getElementById('nextSetBtn').onclick = () => {
+            currentSetIndex += 9;
+            if (currentSetIndex >= photos.length) currentSetIndex = 0;
+            loadGrid(currentSetIndex);
+        };
+
+        document.getElementById('playPauseBtn').onclick = (e) => {
+            isPaused = !isPaused;
+            e.target.innerText = isPaused ? 'Hervat' : 'Pauze';
+        };
+
+        loadGrid(0);
+    </script>
+</body>
+</html>
