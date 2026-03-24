@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gezinsdag 2026 - Foto Galerij</title>
+
+    <!-- PhotoSwipe 5 CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.min.css">
+    
+    <style>
+        :root {
+            --bg-color: #000;
+            --grid-gap: 10px;
+            --text-muted: #aaa;
+            --gold: #ffd700;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body, html {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #fff;
+        }
+
+        .header-info {
+            text-align: center;
+            padding: 15px 10px;
+            background: #111;
+            border-bottom: 1px solid #222;
+        }
+
+        .header-info h1 { margin: 0 0 4px 0; font-size: 22px; color: var(--gold); }
+        .header-info .sub-note { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; display: block; }
+
+        /* De Legenda Box */
+        .instruction-box {
+            display: grid;
+            grid-template-columns: auto auto;
+            justify-content: center;
+            column-gap: 15px;
+            row-gap: 6px;
+            background: rgba(255,255,255,0.03);
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            max-width: 450px;
+            margin: 0 auto;
+        }
+
+        .instruction-item { display: contents; }
+        .icon { font-size: 16px; text-align: center; width: 24px; }
+        .label { font-size: 13px; text-align: left; display: flex; align-items: center; color: #eee; }
+
+        /* --- LOGICA VOOR APPARAAT-SPECIFIEKE TEKST --- */
+        /* Standaard tonen we alles, maar we verbergen wat niet van toepassing is */
+        .desktop-info { display: none; }
+        .mobile-info { display: none; }
+
+        /* Desktop weergave (breder dan 900px) */
+        @media (min-width: 901px) {
+            .desktop-info { display: contents; }
+        }
+
+        /* Mobiele/Tablet weergave (smaller dan 900px) */
+        @media (max-width: 900px) {
+            .mobile-info { display: contents; }
+        }
+
+        /* --- FORCEER ZOOM KNOP (🔍) --- */
+        .pswp__button--zoom {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* De Foto Grid */
+        .gallery-grid {
+            display: grid;
+            gap: var(--grid-gap);
+            padding: var(--grid-gap);
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        @media (max-width: 900px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 500px) { .gallery-grid { grid-template-columns: 1fr; } }
+
+        .gallery-grid a {
+            display: block;
+            aspect-ratio: 1 / 1; 
+            overflow: hidden;
+            border-radius: 8px;
+            background: #111;
+            border: 1px solid #222;
+        }
+
+        .gallery-grid img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.4s ease; }
+
+        /* Download knop stijl */
+        .pswp__button--download-button {
+            display: flex !important;
+            align-items: center; justify-content: center;
+            width: 60px !important; height: 60px !important;
+        }
+        .pswp__button--download-button svg { width: 24px !important; height: 24px !important; fill: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="header-info">
+        <h1>Gezinsdag 2026</h1>
+        <span class="sub-note">Tik op een foto voor een grote weergave</span>
+        
+        <div class="instruction-box">
+            <!-- DOWNLOAD (voor iedereen) -->
+            <div class="instruction-item">
+                <span class="icon">📥</span>
+                <span class="label"><b>Downloaden:</b> Bewaar de foto.</span>
+            </div>
+
+            <!-- ZOOM (voor iedereen) -->
+            <div class="instruction-item">
+                <span class="icon">🔍</span>
+                <span class="label"><b>Vergroten:</b> Tik voor details en "rondfietsen".</span>
+            </div>
+
+            <!-- BLADEREN: Alleen op Desktop -->
+            <div class="instruction-item desktop-info">
+                <span class="icon">⬅️➡️</span>
+                <span class="label"><b>Bladeren:</b> Gebruik de pijltjestoetsen.</span>
+            </div>
+
+            <!-- BLADEREN: Alleen op Mobile -->
+            <div class="instruction-item mobile-info">
+                <span class="icon">↔️</span>
+                <span class="label"><b>Bladeren:</b> Veeg (swipe) naar links of rechts.</span>
+            </div>
+
+            <!-- SLUITEN (voor iedereen) -->
+            <div class="instruction-item">
+                <span class="icon">✖</span>
+                <span class="label"><b>Sluiten:</b> Terug naar het overzicht.</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="gallery-grid" id="main-gallery"></div>
+    <div style="height: 50px;"></div>
+
+    <script type="module">
+        import PhotoSwipeLightbox from 'https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe-lightbox.esm.min.js';
+        import PhotoSwipe from 'https://cdnjs.cloudflare.com/ajax/libs/photoswipe/5.4.2/photoswipe.esm.min.js';
+
+        const baseName = "Gezinsdag 2026";
+        const totaalAantalFotos = 19; 
+        const galleryContainer = document.getElementById('main-gallery');
+
+        for (let i = 1; i <= totaalAantalFotos; i++) {
+            const url = `images/${baseName}_${i}.jpg`;
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            
+            const img = document.createElement('img');
+            img.src = url;
+            img.alt = `Foto ${i}`;
+            img.loading = "lazy";
+
+            img.onload = () => {
+                // TRUC: We vermenigvuldigen de echte maat met 2 voor PhotoSwipe.
+                // Hierdoor denkt PhotoSwipe ALTIJD dat inzoomen (rondfietsen) mogelijk is.
+                anchor.dataset.pswpWidth = img.naturalWidth * 2;
+                anchor.dataset.pswpHeight = img.naturalHeight * 2;
+            };
+
+            anchor.appendChild(img);
+            galleryContainer.appendChild(anchor);
+        }
+
+        const lightbox = new PhotoSwipeLightbox({
+            gallery: '#main-gallery',
+            children: 'a',
+            showHideAnimationType: 'zoom',
+            pswpModule: PhotoSwipe
+        });
+
+        lightbox.on('uiRegister', function() {
+            lightbox.pswp.ui.registerElement({
+                name: 'download-button',
+                order: 7,
+                isButton: true,
+                tagName: 'a',
+                html: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16l-5-5h3V4h4v7h3l-5 5zm9 4v-2H3v2h18z"/></svg>',
+                onInit: (el, pswp) => {
+                    el.setAttribute('download', '');
+                    el.setAttribute('target', '_blank');
+                    pswp.on('change', () => {
+                        el.href = pswp.currSlide.data.src;
+                    });
+                }
+            });
+        });
+
+        lightbox.init();
+    </script>
+</body>
+</html>
